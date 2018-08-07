@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:english_words/english_words.dart';
+import 'package:flutter/animation.dart';
+import 'package:flutter/rendering.dart';
+import 'dart:ui';
+import 'dart:async';
+import 'todo.dart';
+import 'package:flutter/foundation.dart';
+import 'CustomCheckBoxTile.dart';
+import 'package:intl/intl.dart';
 
 void main() => runApp(MyApp());
 
@@ -7,105 +14,792 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Startup Name Generator',
-      home: RandomWords(),
+      title: 'ToDo App for Brittany',
+      theme: new ThemeData(
+        primarySwatch: Colors.purple,
+      ),
+      home: new HomePage(title: 'ToDo'),
     );
   }
 }
 
-class RandomWords extends StatefulWidget {
+class ColorChoices {
+  static const List<Color> colors = [
+    const Color(0xFF5A89E6),
+    const Color(0xFFF77B67),
+    const Color(0xFF4EC5AC),
+  ];
+}
+
+List<ToDoObject> todos = [
+  // new TodoObject.import("SOME_RANDOM_UUID", "Custom", 1, ColorChoies.colors[0], Icons.alarm, [new TaskObject("Task", new DateTime.now()),new TaskObject("Task2", new DateTime.now()),new TaskObject.import("Task3", new DateTime.now(), true)]),
+  new ToDoObject.import(
+      "SOME_RANDOM_UUID", "Custom", ColorChoices.colors[2], Icons.alarm, {
+    new DateTime(2018, 5, 3): [
+      new TaskObject("Meet Clients", new DateTime(2018, 5, 3)),
+      new TaskObject("Design Sprint", new DateTime(2018, 5, 3)),
+      new TaskObject("Icon Set Design for Mobile", new DateTime(2018, 5, 3)),
+      new TaskObject("HTML/CSS Study", new DateTime(2018, 5, 3)),
+    ],
+    new DateTime(2018, 5, 4): [
+      new TaskObject("Meet Clients", new DateTime(2018, 5, 4)),
+      new TaskObject("Design Sprint", new DateTime(2018, 5, 4)),
+      new TaskObject("Icon Set Design for Mobile", new DateTime(2018, 5, 4)),
+      new TaskObject("HTML/CSS Study", new DateTime(2018, 5, 4)),
+    ]
+  }),
+  new ToDoObject("Personal", Icons.person),
+  new ToDoObject("Work", Icons.work),
+  new ToDoObject("Home", Icons.home),
+  new ToDoObject("Shopping", Icons.shopping_basket),
+  new ToDoObject("CME", Icons.school),
+];
+
+class HomePage extends StatefulWidget {
+  HomePage({Key key, this.title}) : super(key: key);
+
+  final String title;
+
   @override
-  createState() => RandomWordsState();
+  _HomePageState createState() => new _HomePageState();
 }
 
-class RandomWordsState extends State<RandomWords> {
-  final _suggestions = <WordPair>[];
-  final _biggerFont = const TextStyle(fontSize: 18.0);
-  final _saved = Set<WordPair>();
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  ScrollController scrollController;
+  Color backgroundColor;
+  Tween<Color> colorTween;
+  int currentPage = 0;
+  Color constBackColor;
 
-  Widget _buildSuggestions() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemBuilder: (context, i) {
-        if (i.isOdd) {
-          return Divider();
+  @override
+  void initState() {
+    colorTween = new ColorTween(
+        begin: ColorChoices.colors[0], end: ColorChoices.colors[2]);
+    backgroundColor = todos[0].color;
+    scrollController = new ScrollController();
+    scrollController.addListener(() {
+      ScrollPosition position = scrollController.position;
+      ScrollDirection direction = position.userScrollDirection;
+      int page = position.pixels ~/
+          (position.maxScrollExtent / (todos.length.toDouble() - 1));
+      double pageDo = (position.pixels /
+          (position.maxScrollExtent / (todos.length.toDouble() - 1)));
+      double percent = pageDo - page;
+
+      if (direction == ScrollDirection.reverse) {
+        if (todos.length - 1 == page + 1) {
+          return;
         }
-        final index = i ~/ 2;
-
-        if (index >= _suggestions.length) {
-          // ...then generate 10 more and add them to the suggestions list.
-          _suggestions.addAll(generateWordPairs().take(10));
-        }
-        return _buildRow(_suggestions[index]);
-      },
-    );
-  }
-
-  Widget _buildRow(WordPair pair) {
-    final alreadySaved = _saved.contains(pair);
-    return ListTile(
-      title: Text(
-        pair.asPascalCase,
-        style: _biggerFont,
-      ),
-      trailing: Icon(
-        alreadySaved ? Icons.favorite : Icons.favorite_border,
-        color: alreadySaved ? Colors.red : null,
-      ),
-      onTap: () {
+        colorTween.begin = todos[page].color;
+        colorTween.end = todos[page + 1].color;
         setState(() {
-          if (alreadySaved) {
-            _saved.remove(pair);
-          } else {
-            _saved.add(pair);
-          }
+          backgroundColor = colorTween.lerp(percent);
         });
-      },
-    );
+      } else if (direction == ScrollDirection.forward) {
+        if (todos.length - 1 > page + 1) {
+          return;
+        }
+        colorTween.begin = todos[page].color;
+        colorTween.end = todos[page + 1].color;
+        setState(() {
+          backgroundColor = colorTween.lerp(percent);
+        });
+      } else {
+        return;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Startup Name Generator'),
-        actions: <Widget>[
-          IconButton(icon: Icon(Icons.list), onPressed: _pushSaved),
-        ],
-      ),
-      body: _buildSuggestions(),
+    final double _width = MediaQuery.of(context).size.width;
+
+    final double _height = MediaQuery.of(context).size.height;
+    final double _ratioH = _height / 812.0;
+
+    return new Container(
+      decoration: new BoxDecoration(color: Colors.green),
+      child: new Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: new AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0.0,
+            title: new Text("TODO App"),
+            leading: new IconButton(
+              icon: new Icon(Icons.search),
+              onPressed: () {},
+            ),
+            actions: <Widget>[
+              new IconButton(
+                icon: new Icon(
+                  Icons.menu,
+                  size: 26.0,
+                ),
+                onPressed: () {},
+              )
+            ],
+          ),
+          body: new Container(
+            child: new Stack(
+              children: <Widget>[
+                new Container(
+                  child: new Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      new Container(
+                        padding: const EdgeInsets.only(
+                            top: 20.0, bottom: 20.0, left: 50.0, right: 60.0),
+                        child: new Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            new Padding(
+                              padding: const EdgeInsets.only(bottom: 25.0),
+                              child: new Container(
+                                decoration: new BoxDecoration(
+                                  boxShadow: [
+                                    new BoxShadow(
+                                        color: Colors.black38,
+                                        offset: new Offset(5.0, 5.0),
+                                        blurRadius: 15.0)
+                                  ],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: new CircleAvatar(
+                                  backgroundColor: Colors.grey,
+                                ),
+                              ),
+                            ),
+                            new Padding(
+                              padding: const EdgeInsets.only(bottom: 10.0),
+                              child: new Text(
+                                "Hello, Username.",
+                                style: new TextStyle(
+                                    color: Colors.white, fontSize: 30.0),
+                              ),
+                            ),
+                            new Text(
+                              "Some Bs Text ",
+                              style: new TextStyle(color: Colors.white70),
+                            ),
+                            new Text(
+                              "TODO: display tasks with a due date of today",
+                              style: new TextStyle(color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                      ),
+                      new Container(
+                        height: 350.0,
+                        width: _width,
+                        child: new ListView.builder(
+                          itemBuilder: (context, index) {
+                            ToDoObject todoObject = todos[index];
+                            EdgeInsets padding = const EdgeInsets.only(
+                                left: 10.0,
+                                right: 10.0,
+                                top: 20.0,
+                                bottom: 30.0);
+
+                            double percentComplete =
+                                todoObject.percentageCompleted();
+
+                            return new Padding(
+                                padding: padding,
+                                child: new InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                        new PageRouteBuilder(
+                                            pageBuilder: (BuildContext context,
+                                                    Animation<double> animation,
+                                                    Animation<double>
+                                                        secondaryAnimation) =>
+                                                new DetailPage(
+                                                    todoObject: todoObject),
+                                            transitionsBuilder: (
+                                              BuildContext context,
+                                              Animation<double> animation,
+                                              Animation<double>
+                                                  secondaryAnimation,
+                                              Widget child,
+                                            ) {
+                                              return new SlideTransition(
+                                                position: new Tween<Offset>(
+                                                  begin: const Offset(0.0, 1.0),
+                                                  end: Offset.zero,
+                                                ).animate(animation),
+                                                child: new SlideTransition(
+                                                  position: new Tween<Offset>(
+                                                    begin: Offset.zero,
+                                                    end: const Offset(0.0, 1.0),
+                                                  ).animate(secondaryAnimation),
+                                                  child: child,
+                                                ),
+                                              );
+                                            },
+                                            transitionDuration: const Duration(
+                                                milliseconds: 1000)));
+                                  },
+                                  child: new Container(
+                                      decoration: new BoxDecoration(
+                                          borderRadius:
+                                              new BorderRadius.circular(10.0),
+                                          boxShadow: [
+                                            new BoxShadow(
+                                                color:
+                                                    Colors.black.withAlpha(70),
+                                                offset: const Offset(3.0, 10.0),
+                                                blurRadius: 15.0)
+                                          ]),
+                                      height: 250.0,
+                                      child: new Stack(
+                                        children: <Widget>[
+                                          new Hero(
+                                            tag:
+                                                todoObject.uuid + "_background",
+                                            child: new Container(
+                                              decoration: new BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    new BorderRadius.circular(
+                                                        10.0),
+                                              ),
+                                            ),
+                                          ),
+                                          new Padding(
+                                            padding: const EdgeInsets.all(16.0),
+                                            child: new Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              mainAxisSize: MainAxisSize.max,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: <Widget>[
+                                                new Expanded(
+                                                  child: new Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: <Widget>[
+                                                      new Hero(
+                                                        tag: todoObject.uuid +
+                                                            "_icon",
+                                                        child: new Container(
+                                                          decoration:
+                                                              new BoxDecoration(
+                                                            shape:
+                                                                BoxShape.circle,
+                                                            border: new Border
+                                                                    .all(
+                                                                color: Colors
+                                                                    .grey
+                                                                    .withAlpha(
+                                                                        70),
+                                                                style:
+                                                                    BorderStyle
+                                                                        .solid,
+                                                                width: 1.0),
+                                                          ),
+                                                          child: new Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: new Icon(
+                                                                todoObject.icon,
+                                                                color:
+                                                                    todoObject
+                                                                        .color),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      new Expanded(
+                                                        child: new Container(
+                                                            alignment: Alignment
+                                                                .topRight,
+                                                            child: new Hero(
+                                                              tag: todoObject
+                                                                      .uuid +
+                                                                  "_more_vert",
+                                                              child:
+                                                                  new Material(
+                                                                color: Colors
+                                                                    .transparent,
+                                                                type: MaterialType
+                                                                    .transparency,
+                                                                child:
+                                                                    new IconButton(
+                                                                  icon:
+                                                                      new Icon(
+                                                                    Icons
+                                                                        .more_vert,
+                                                                    color: Colors
+                                                                        .grey,
+                                                                  ),
+                                                                  onPressed:
+                                                                      () {},
+                                                                ),
+                                                              ),
+                                                            )),
+                                                      )
+                                                    ],
+                                                  ),
+                                                ),
+                                                new Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            bottom: 8.0),
+                                                    child: new Align(
+                                                        alignment: Alignment
+                                                            .bottomLeft,
+                                                        child: new Hero(
+                                                          tag: todoObject.uuid +
+                                                              "_number_of_tasks",
+                                                          child: new Material(
+                                                              color: Colors
+                                                                  .transparent,
+                                                              child: new Text(
+                                                                todoObject
+                                                                        .taskAmount()
+                                                                        .toString() +
+                                                                    " Tasks",
+                                                                style:
+                                                                    new TextStyle(),
+                                                              )),
+                                                        ))),
+                                                new Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          bottom: 20.0),
+                                                  child: new Align(
+                                                      alignment:
+                                                          Alignment.bottomLeft,
+                                                      child: new Hero(
+                                                        tag: todoObject.uuid +
+                                                            "_title",
+                                                        child: new Material(
+                                                          color: Colors
+                                                              .transparent,
+                                                          child: new Text(
+                                                            todoObject.title,
+                                                            style:
+                                                                new TextStyle(
+                                                                    fontSize:
+                                                                        30.0),
+                                                          ),
+                                                        ),
+                                                      )),
+                                                ),
+                                                new Align(
+                                                    alignment:
+                                                        Alignment.bottomLeft,
+                                                    child: new Hero(
+                                                        tag: todoObject.uuid +
+                                                            "_progress_bar",
+                                                        child: new Material(
+                                                          color: Colors
+                                                              .transparent,
+                                                          child: new Row(
+                                                            children: <Widget>[
+                                                              new Expanded(
+                                                                child:
+                                                                    new LinearProgressIndicator(
+                                                                  value:
+                                                                      percentComplete,
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .grey
+                                                                          .withAlpha(
+                                                                              50),
+                                                                  valueColor: new AlwaysStoppedAnimation<
+                                                                          Color>(
+                                                                      todoObject
+                                                                          .color),
+                                                                ),
+                                                              ),
+                                                              new Padding(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                            .only(
+                                                                        left:
+                                                                            5.0),
+                                                                child: new Text((percentComplete *
+                                                                            100)
+                                                                        .round()
+                                                                        .toString() +
+                                                                    "%"),
+                                                              )
+                                                            ],
+                                                          ),
+                                                        )))
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      )),
+                                ));
+                          },
+                          padding:
+                              const EdgeInsets.only(left: 40.0, right: 40.0),
+                          scrollDirection: Axis.horizontal,
+                          physics: new CustomScrollPhysics(),
+                          controller: scrollController,
+                          itemExtent: _width - 80,
+                          itemCount: todos.length,
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                new Padding(
+                  padding: const EdgeInsets.only(right: 15.0, bottom: 15.0),
+                  child: new Align(
+                    alignment: Alignment.bottomRight,
+                    child: new FloatingActionButton(
+                      onPressed: () => _buildNewTask(),
+                      tooltip: 'Create New Task',
+                      child: new Icon(Icons.add),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          )),
     );
   }
 
-  void _pushSaved() {
-    Navigator.of(context).push(
-      
-      MaterialPageRoute(
-        builder: (context) {
-          final tiles = _saved.map(
-            (pair) {
-              return ListTile(
-                title: Text(
-                  pair.asPascalCase,
-                  style: _biggerFont,
-                ),
-              );
-            },
-          );
-          final divided = ListTile
-              .divideTiles(
-                context: context,
-                tiles: tiles,
-              )
-              .toList();
-
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('Saved Suggestions'),
+  Future<Null> _buildNewTask() async {
+    return showDialog<Null>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return new AlertDialog(
+          title: new Text('Rewind and remember'),
+          content: new SingleChildScrollView(
+            child: new Form(
+              child: TextField(),
+            )
+          ),
+          actions: <Widget>[
+            new FlatButton(
+              child: new Text('Create'),
+              onPressed: () {
+                // create the TODO task
+              },
             ),
-            body: ListView(children: divided),
-          );
-        },
+            new FlatButton(
+              child: new Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class DetailPage extends StatefulWidget {
+  DetailPage({@required this.todoObject, Key key}) : super(key: key);
+
+  final ToDoObject todoObject;
+  @override
+  _DetailPageState createState() => new _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> with TickerProviderStateMixin {
+  double percentComplete;
+  AnimationController animationBar;
+  double barPercent = 0.0;
+  Tween<double> animT;
+  AnimationController scaleAnimation;
+
+  @override
+  void initState() {
+    scaleAnimation = new AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 1000),
+        lowerBound: 0.0,
+        upperBound: 1.0);
+
+    percentComplete = widget.todoObject.percentageCompleted();
+    barPercent = percentComplete;
+    animationBar = new AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 100))
+      ..addListener(() {
+        setState(() {
+          barPercent = animT.lerp(animationBar.value);
+        });
+      });
+    animT = new Tween<double>(begin: percentComplete, end: percentComplete);
+    scaleAnimation.forward();
+    super.initState();
+  }
+
+  void updateBarPercent() async {
+    double newPercentComplete = widget.todoObject.percentageCompleted();
+    if (animationBar.status == AnimationStatus.forward ||
+        animationBar.status == AnimationStatus.completed) {
+      animT.begin = newPercentComplete;
+      await animationBar.reverse();
+    } else if (animationBar.status == AnimationStatus.reverse ||
+        animationBar.status == AnimationStatus.dismissed) {
+      animT.end = newPercentComplete;
+      await animationBar.forward();
+    } else {
+      print("wtf");
+    }
+    percentComplete = newPercentComplete;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return new Stack(
+      children: <Widget>[
+        new Hero(
+          tag: widget.todoObject.uuid + "_background",
+          child: new Container(
+            decoration: new BoxDecoration(
+              color: Colors.white,
+              borderRadius: new BorderRadius.circular(0.0),
+            ),
+          ),
+        ),
+        new Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: new AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0.0,
+            leading: new IconButton(
+              icon: new Icon(
+                Icons.arrow_back,
+                color: Colors.grey,
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            actions: <Widget>[
+              new Hero(
+                tag: widget.todoObject.uuid + "_more_vert",
+                child: new Material(
+                  color: Colors.transparent,
+                  type: MaterialType.transparency,
+                  child: new IconButton(
+                    icon: new Icon(
+                      Icons.more_vert,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {},
+                  ),
+                ),
+              )
+            ],
+          ),
+          body: new Padding(
+            padding: const EdgeInsets.only(left: 40.0, right: 40.0, top: 35.0),
+            child: new Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.max,
+              children: <Widget>[
+                new Padding(
+                  padding: const EdgeInsets.only(bottom: 30.0),
+                  child: new Align(
+                    alignment: Alignment.bottomLeft,
+                    child: new Hero(
+                      tag: widget.todoObject.uuid + "_icon",
+                      child: new Container(
+                        decoration: new BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: new Border.all(
+                              color: Colors.grey.withAlpha(70),
+                              style: BorderStyle.solid,
+                              width: 1.0),
+                        ),
+                        child: new Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: new Icon(
+                            widget.todoObject.icon,
+                            color: widget.todoObject.color,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                new Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: new Align(
+                        alignment: Alignment.bottomLeft,
+                        child: new Hero(
+                          tag: widget.todoObject.uuid + "_number_of_tasks",
+                          child: new Material(
+                              color: Colors.transparent,
+                              child: new Text(
+                                widget.todoObject.taskAmount().toString() +
+                                    " Tasks",
+                                style: new TextStyle(),
+                              )),
+                        ))),
+                new Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: new Align(
+                      alignment: Alignment.bottomLeft,
+                      child: new Hero(
+                        tag: widget.todoObject.uuid + "_title",
+                        child: new Material(
+                          color: Colors.transparent,
+                          child: new Text(
+                            widget.todoObject.title,
+                            style: new TextStyle(fontSize: 30.0),
+                          ),
+                        ),
+                      )),
+                ),
+                new Padding(
+                  padding: const EdgeInsets.only(bottom: 30.0),
+                  child: new Align(
+                      alignment: Alignment.bottomLeft,
+                      child: new Hero(
+                          tag: widget.todoObject.uuid + "_progress_bar",
+                          child: new Material(
+                            color: Colors.transparent,
+                            child: new Row(
+                              children: <Widget>[
+                                new Expanded(
+                                  child: new LinearProgressIndicator(
+                                    value: barPercent,
+                                    backgroundColor: Colors.grey.withAlpha(50),
+                                    valueColor:
+                                        new AlwaysStoppedAnimation<Color>(
+                                            widget.todoObject.color),
+                                  ),
+                                ),
+                                new Padding(
+                                  padding: const EdgeInsets.only(left: 5.0),
+                                  child: new Text(
+                                      (barPercent * 100).round().toString() +
+                                          "%"),
+                                )
+                              ],
+                            ),
+                          ))),
+                ),
+                new Expanded(
+                    child: new ScaleTransition(
+                  scale: scaleAnimation,
+                  child: new ListView.builder(
+                    padding: const EdgeInsets.all(0.0),
+                    itemBuilder: (BuildContext context, int index) {
+                      DateTime currentDate =
+                          widget.todoObject.tasks.keys.toList()[index];
+                      DateTime _now = new DateTime.now();
+                      DateTime today =
+                          new DateTime(_now.year, _now.month, _now.day);
+                      String dateString;
+                      if (currentDate.isBefore(today)) {
+                        dateString = "Previous - " +
+                            new DateFormat.E().format(currentDate);
+                      } else if (currentDate.isAtSameMomentAs(today)) {
+                        dateString = "Today";
+                      } else if (currentDate.isAtSameMomentAs(
+                          today.add(const Duration(days: 1)))) {
+                        dateString = "Tomorrow";
+                      } else {
+                        dateString = new DateFormat.E().format(currentDate);
+                      }
+                      List<Widget> tasks = [new Text(dateString)];
+                      widget.todoObject.tasks[currentDate].forEach((task) {
+                        tasks.add(new CustomCheckboxListTile(
+                          activeColor: widget.todoObject.color,
+                          value: task.isCompleted(),
+                          onChanged: (value) {
+                            setState(() {
+                              task.setComplete(value);
+                              updateBarPercent();
+                            });
+                          },
+                          title: new Text(task.task),
+                          secondary: new Icon(Icons.alarm),
+                        ));
+                      });
+                      return new Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: tasks,
+                      );
+                    },
+                    itemCount: widget.todoObject.tasks.length,
+                  ),
+                ))
+              ],
+            ),
+          ),
+        )
+      ],
+    );
+  }
+}
+
+class CustomScrollPhysics extends ScrollPhysics {
+  CustomScrollPhysics({
+    ScrollPhysics parent,
+  }) : super(parent: parent);
+
+  final double numOfItems = todos.length.toDouble() - 1;
+
+  @override
+  CustomScrollPhysics applyTo(ScrollPhysics ancestor) {
+    return new CustomScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  double _getPage(ScrollPosition position) {
+    return position.pixels / (position.maxScrollExtent / numOfItems);
+    // return position.pixels / position.viewportDimension;
+  }
+
+  double _getPixels(ScrollPosition position, double page) {
+    // return page * position.viewportDimension;
+    return page * (position.maxScrollExtent / numOfItems);
+  }
+
+  double _getTargetPixels(
+      ScrollPosition position, Tolerance tolerance, double velocity) {
+    double page = _getPage(position);
+    if (velocity < -tolerance.velocity)
+      page -= 0.5;
+    else if (velocity > tolerance.velocity) page += 0.5;
+    return _getPixels(position, page.roundToDouble());
+  }
+
+  @override
+  Simulation createBallisticSimulation(
+      ScrollMetrics position, double velocity) {
+    if ((velocity <= 0.0 && position.pixels <= position.minScrollExtent) ||
+        (velocity >= 0.0 && position.pixels >= position.maxScrollExtent))
+      return super.createBallisticSimulation(position, velocity);
+    final Tolerance tolerance = this.tolerance;
+    final double target = _getTargetPixels(position, tolerance, velocity);
+    if (target != position.pixels)
+      return new ScrollSpringSimulation(
+          spring, position.pixels, target, velocity,
+          tolerance: tolerance);
+    return null;
+  }
+}
+
+class TaskBuilder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Second Screen"),
+      ),
+      body: Center(
+        child: RaisedButton(
+          onPressed: () {
+            // Navigate back to first screen when tapped!
+          },
+          child: Text('Go back!'),
+        ),
       ),
     );
   }
